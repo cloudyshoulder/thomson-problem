@@ -280,3 +280,85 @@ anglesdata =
      Flatten[{"Difference", 
        Round[Drop[#[[3]], 1], .001] - angleswiki}]} &[
    Transpose@anglesdata]  // Transpose // Grid
+
+
+(*n=16,32*)
+
+Partition[Table[Clear["Global*`"]
+       force[pt1_, pt2_] := 
+        If[pt1 == pt2, {0, 0, 0}, 
+         Normalize[(pt1 - pt2)]/(EuclideanDistance[pt1, pt2]^2)];
+      coord[\[Theta]_, \[Phi]_] := {Cos[\[Theta]] Sin[\[Phi]], 
+        Sin[\[Theta]] Sin[\[Phi]], Cos[\[Phi]]};
+      max = 32;
+      \[Theta] = RandomReal[{0, 2 \[Pi]}, max];
+      \[Phi] = RandomReal[{0, \[Pi]}, max];
+      iposition = Table[coord[\[Theta][[i]], \[Phi][[i]]], {i, max}];
+      inetforce[pt_, npt_] := 
+       Sum[force[pt, iposition[[i]]], {i, 1, npt}];
+      position = Table[0, max];
+      netforce[pt_, npt_] := 
+       Sum[force[pt, position[[i]]], {i, 1, npt}];
+      newposition[p_, npt_] := Normalize[p + netforce[p, npt]];
+      positionRecursive[n_] := 
+       Table[position[[i]] = newposition[position[[i]], n] , {i, n}];
+      potential[position_, npt_] := 
+       Sum[Sum[1/EuclideanDistance[position[[i]], position[[j]]], {j, 
+          i + 1, npt}], {i, 1, npt - 1}];
+      Table[
+       Table[
+        position[[i]] = 
+         Normalize[iposition[[i]] + inetforce[iposition[[i]], n]], {i,
+          n}];
+       
+       While[
+        Round[position[[;; n]], 10^-10] != 
+         Round[positionRecursive@n, 10^-10], positionRecursive[n]];
+       {n, Round[Min[
+           
+           Flatten[
+            Table[Round[ArcCos[Dot[position[[i]], position[[j]]]], 
+              10^-7], {i, 1, n - 1}, {j, i + 1, n}]]
+           ] 180/\[Pi], .0001], Round[potential[position, n], .0001]}
+       , {n, {16, 32}}], 10] // Flatten , 3] // Union // 
+  Grid // Timing
+  
+  
+  (*n=64 ?*)
+  
+  Partition[Table[Clear["Global*`"]
+     force[pt1_, pt2_] := 
+      If[pt1 == pt2, {0, 0, 0}, 
+       Normalize[(pt1 - pt2)]/(EuclideanDistance[pt1, pt2]^2)];
+    coord[\[Theta]_, \[Phi]_] := {Cos[\[Theta]] Sin[\[Phi]], 
+      Sin[\[Theta]] Sin[\[Phi]], Cos[\[Phi]]};
+    max = 64;
+    \[Theta] = RandomReal[{0, 2 \[Pi]}, max];
+    \[Phi] = RandomReal[{0, \[Pi]}, max];
+    iposition = Table[coord[\[Theta][[i]], \[Phi][[i]]], {i, max}];
+    inetforce[pt_, npt_] := 
+     Sum[force[pt, iposition[[i]]], {i, 1, npt}];
+    position = Table[0, max];
+    netforce[pt_, npt_] := 
+     Sum[force[pt, position[[i]]], {i, 1, npt}];
+    newposition[p_, npt_] := Normalize[p + netforce[p, npt]];
+    positionRecursive[n_] := 
+     Table[position[[i]] = newposition[position[[i]], n] , {i, n}];
+    potential[position_, npt_] := 
+     Sum[Sum[1/EuclideanDistance[position[[i]], position[[j]]], {j, 
+        i + 1, npt}], {i, 1, npt - 1}];
+    Table[
+     Table[
+      position[[i]] = 
+       Normalize[iposition[[i]] + inetforce[iposition[[i]], n]], {i, 
+       n}];
+     
+     While[
+      Round[position[[;; n]], 10^-10] != 
+       Round[positionRecursive@n, 10^-10], positionRecursive[n]];
+     {n, Round[Min[
+         Flatten[
+          Table[Round[ArcCos[Dot[position[[i]], position[[j]]]], 
+            10^-7], {i, 1, n - 1}, {j, i + 1, n}]]
+         ] 180/\[Pi], .0001], Round[potential[position, n], .0001]}
+     , {n, {64}}], 10] // Flatten , 3] // Union 
