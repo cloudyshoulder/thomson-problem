@@ -1,1 +1,109 @@
+Clear["Global*`"]
+(*Cartesian coordintates of random spherical values*)
 
+coord[\[Theta]_, \[Phi]_] := {Cos[\[Theta]] Sin[\[Phi]], 
+   Sin[\[Theta]] Sin[\[Phi]], Cos[\[Phi]]};
+(*Force vector between any two given points (pt2 on pt1) (accounts \
+for redundant values)*)
+
+force[pt1_, pt2_] := 
+  If[pt1 == pt2, {0, 0, 0}, 
+   Normalize[(pt1 - pt2)]/(EuclideanDistance[pt1, pt2]^2)];
+listofimages[step_, max_, stepmax_] :=
+  (*Module*)
+  Module[
+   {\[Theta], \[Phi], position},
+   SeedRandom[27](*keeps consistent initial angles*);
+   \[Theta] = Table[RandomReal[{0, 2 \[Pi]}], {max}]; \[Phi] = 
+    Table[RandomReal[{0, Pi}], {max}];
+   position = Table[coord[\[Theta][[i]], \[Phi][[i]]]
+     (*gives cartesian coordiantes for random \[Phi],\[Theta]*), {i, 
+      1, max}, {stepmax}];
+   Table[position[[i, j]] = 
+     Normalize[
+      position[[i, j - 1]] + 
+       Sum[
+        force[position[[i, j - 1]], 
+         position[[z, 
+          j - 1]]](*Force of the second eletron on the first*), {z, 1,
+          max}](*new position=old position + 
+      the net force at old position*)
+      ](*Normalize result so it \
+is on the sphere*), {j, 2, 
+     stepmax}(*This essentially gives the coordinates of the \
+trajectory, 
+    we exlucde the first element because it's the initial point*), {i,
+      1, max}(*i is behind j is because we have to update all ith \
+electron's jth position first then we can calculate all ith \
+electron's (j+1)th position*)];
+   Show[(*Graphics*)
+    Graphics3D[{
+      (*Sphere*)
+      Style[Sphere[], Opacity[0.025]], 
+      Style[Sphere[{0, 0, 0}, 0.1], Green],
+      (*Show*)
+      
+      Table[{(*Tubes*)
+        
+        Style[Tube[{{0, 0, 0}, position[[i, step]]}, 0.04], Blue],
+        (*Points*)
+        
+        Style[Sphere[position[[i, step]], 0.1], Red],
+        (*normalized net force vectors*)
+        
+        Arrow[{position[[i, step]],(*Normalized force vector*)
+          position[[i, step]] + 
+           0.5 Normalize[
+             Sum[force[position[[i, step]], position[[z, step]]], {z, 
+               1, max}]]}]},
+       {i, 1, max}],
+      (*point label*)
+      
+      Table[Text[
+        Style[ToString[i], FontFamily -> "Times New Roman", Yellow, 
+         FontSize -> 16], position[[i, step]]], {i, 1, max}],
+      (*sectors label*)
+      
+      Table[Text[
+        Style[ToString[
+           ArcCos@Dot[position[[i, step]], 
+              position[[j, step]]]*180/\[Pi]] <> "\[Degree]", 
+         FontFamily -> "Times New Roman", 
+         Hue[((i - 1) (((max - (i + 1) + 1) + 1) + (max - 1))/
+                2(*trapezoid formula*)+ (j - i))/((max - 1) max/
+               2)(*position of the plot in the list/
+           total number of plots*)*9/
+            10(*color goes from red to pink*)], FontSize -> 16], 
+        Normalize[(position[[j, 
+             step]] + (position[[i, step]] - position[[j, step]])/
+             2)](*make sure the position is in the middle of two \
+points*)*(0.2 + ((i - 1) (((max - (i + 1) + 1) + 1) + (max - 1))/
+                 2(*trapezoid formula*)+ (j - i))/((max - 1) max/2) 4/
+             5)(*same position as sectors*)], {i, 1, max - 1}, {j, 
+        i + 1, max}],
+      (*polygon*)
+      
+      Style[Polygon[#], Opacity[0.1]] & /@ 
+       Subsets[position[[All, step]], {3}]},
+     (*options*)Boxed -> False, ImageSize -> {400, 400}, 
+     PlotRange -> {{-1.5, 1.5}, {-1.5, 1.5}, {-1.5, 1.5}}, 
+     ViewAngle -> Pi/11],
+    (*sectors*)
+    Apply[Sequence,
+     Table[
+      ParametricPlot3D[
+       N[RotationMatrix[\[Theta], 
+           Evaluate[
+            Cross[position[[i, step]], 
+             position[[j, step]]]]]].position[[i, 
+          step]] (0.2 + ((i - 
+                 1) (((max - (i + 1) + 1) + 1) + (max - 1))/
+                2(*trapezoid formula*)+ (j - i))/((max - 1) max/2) 4/
+            5),
+       {\[Theta], 0, 
+        ArcCos@Evaluate[
+          Dot[position[[i, step]], position[[j, step]]]]}, 
+       PlotStyle -> {Hue[((i - 
+                 1) (((max - (i + 1) + 1) + 1) + (max - 1))/2 + (j - 
+                i))/((max - 1) max/2)*9/10], Thickness[0.005]}],
+      {i, 1, max - 1}, {j, i + 1, max}]]]];
