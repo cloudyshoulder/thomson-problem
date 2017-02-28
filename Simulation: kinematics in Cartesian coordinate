@@ -1,1 +1,77 @@
-
+Clear["Global*`"]
+coord[\[Theta]_, \[Phi]_] := {Cos[\[Theta]] Sin[\[Phi]], 
+   Sin[\[Theta]] Sin[\[Phi]], Cos[\[Phi]]};
+force[pt1_, pt2_] := 
+  If[pt1 == pt2, {0, 0, 0}, 
+   Normalize[(pt1 - pt2)]/(EuclideanDistance[pt1, pt2]^2)];
+images[step_, max_, stepmax_, t_] := 
+  Module[{\[Theta], \[Phi], position, velocity},
+   SeedRandom[27];
+   \[Theta] = Table[RandomReal[{0, 2 \[Pi]}], {max}]; \[Phi] = 
+    Table[RandomReal[{0, Pi}], {max}];
+   position = 
+    Table[coord[\[Theta][[i]], \[Phi][[i]]], {i, 1, max}, {stepmax}];
+   velocity = Table[{0, 0, 0}, {i, 1, max}, {stepmax}];
+   Table[{position[[i, j]] = 
+        Normalize[
+         position[[i, 
+           j - 1]] + (velocity[[i, j - 1]] - 
+             position[[i, j - 1]] Dot[#, velocity[[i, j - 1]]]) t + 
+          # t^2 /2
+         ], 
+       velocity[[i, 
+         j]] = (velocity[[i, j - 1]] - 
+           position[[i, j - 1]] Dot[#, 
+             velocity[[i, 
+              j - 1]]])(*only tangential velocity*)+ # t} &@((# - 
+          position[[i, j - 1]] Dot[#, 
+            position[[i, j - 1]]](*tangential acceleration=
+         acceleration-radial acceleration*)) &@
+       Sum[force[position[[i, j - 1]], position[[z, j - 1]]], {z, 1, 
+         max}]), {j, 2, stepmax}, {i, 1, max}];
+   Show[Graphics3D[{Style[Sphere[], Opacity[0.025]], 
+      Style[Sphere[{0, 0, 0}, 0.1], Green], 
+      Table[{Style[Tube[{{0, 0, 0}, position[[i, step]]}, 0.04], 
+         Blue], Style[Sphere[position[[i, step]], 0.1], Red], 
+        Arrow[{position[[i, step]], 
+          position[[i, step]] + 
+           0.5 Normalize[
+             Sum[force[position[[i, step]], position[[z, step]]], {z, 
+               1, max}]]}]}, {i, 1, max}], 
+      Table[Text[
+        Style[ToString[i], FontFamily -> "Times New Roman", Yellow, 
+         FontSize -> 16], position[[i, step]]], {i, 1, max}], 
+      Table[Text[
+        Style[ToString[
+           ArcCos@Dot[position[[i, step]], 
+              position[[j, step]]]*180/\[Pi]] <> "\[Degree]", 
+         FontFamily -> "Times New Roman", 
+         Hue[((i - 1) (((max - (i + 1) + 1) + 1) + (max - 1))/2 + (j -
+                 i))/((max - 1) max/2)*9/10], FontSize -> 16], 
+        Normalize[(position[[j, 
+              step]] + (position[[i, step]] - position[[j, step]])/
+             
+             2)]*(0.2 + ((i - 
+                  1) (((max - (i + 1) + 1) + 1) + (max - 1))/2 + (j - 
+                 i))/((max - 1) max/2) 4/5)], {i, 1, max - 1}, {j, 
+        i + 1, max}], 
+      Style[Polygon[#], Opacity[0.1]] & /@ 
+       Subsets[position[[All, step]], {3}]}, Boxed -> False, 
+     ImageSize -> {400, 400}, 
+     PlotRange -> {{-1.5, 1.5}, {-1.5, 1.5}, {-1.5, 1.5}}, 
+     ViewAngle -> Pi/11], 
+    Apply[Sequence, 
+     Table[ParametricPlot3D[
+       N[RotationMatrix[\[Theta], 
+           Evaluate[
+            Cross[position[[i, step]], 
+             position[[j, step]]]]]].position[[i, 
+           step]] (0.2 + ((i - 
+                 1) (((max - (i + 1) + 1) + 1) + (max - 1))/2 + (j - 
+                i))/((max - 1) max/2) 4/5), {\[Theta], 0, 
+        ArcCos@Evaluate[
+          Dot[position[[i, step]], position[[j, step]]]]}, 
+       PlotStyle -> {Hue[((i - 
+                 1) (((max - (i + 1) + 1) + 1) + (max - 1))/2 + (j - 
+                i))/((max - 1) max/2)*9/10], Thickness[0.005]}], {i, 
+       1, max - 1}, {j, i + 1, max}]]]];
