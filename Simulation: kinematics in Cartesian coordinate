@@ -75,3 +75,5 @@ images[step_, max_, stepmax_, t_] :=
                  1) (((max - (i + 1) + 1) + 1) + (max - 1))/2 + (j - 
                 i))/((max - 1) max/2)*9/10], Thickness[0.005]}], {i, 
        1, max - 1}, {j, i + 1, max}]]]];
+       
+(*To produce the simulation use images[step, number of electrons, maximum number of steps, time interval]*)
