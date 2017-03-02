@@ -1,1 +1,76 @@
-
+Clear["Global*`"]
+coord[\[Theta]_, \[Phi]_] := {Cos[\[Theta]] Sin[\[Phi]], 
+   Sin[\[Theta]] Sin[\[Phi]], Cos[\[Phi]]};
+force[pt1_, pt2_] := 
+  If[pt1 == pt2, {0, 0, 0}, 
+   Normalize[(pt1 - pt2)]/(EuclideanDistance[pt1, pt2]^2)];
+images[step_, max_, stepmax_] := 
+  Module[{\[Theta], \[Phi], position, angvelocity, \[Theta]i, \[Phi]i,
+     thetahat, phihat}, SeedRandom[20];
+   \[Theta]i = Table[RandomReal[{0, 2 \[Pi]}], {max}]; \[Phi]i = 
+    Table[RandomReal[{0, Pi}], {max}];
+   position = 
+    Table[coord[\[Theta]i[[i]], \[Phi]i[[i]]], {i, 1, max}, {stepmax}];
+   \[Phi][p_] := ArcCos[p[[3]]];
+   \[Theta][p_] := 
+    Which[(#[[2]] < 0 && #[[1]] < 0) || (#[[2]] > 0 && #[[1]] < 0), 
+       ArcTan[#[[2]]/#[[1]]] + \[Pi], #[[2]] < 0 && #[[1]] > 0, 
+       ArcTan[#[[2]]/#[[1]]] + 2 \[Pi], True, 
+       ArcTan[#[[2]]/#[[1]]]] &@p;
+   thetahat[p_] := {-Sin[\[Theta][p]], Cos[\[Theta][p]], 0};
+   phihat[p_] := {Cos[\[Theta][p]] Cos[\[Phi][p]], 
+     Sin[\[Theta][p]] Cos[\[Phi][p]], -Sin[\[Phi][p]]};
+   Table[{position[[i, j]] =
+        coord[\[Theta][position[[i, j - 1]]] + 
+          Dot[#, thetahat[position[[i, j - 1]]]], \[Phi][
+           position[[i, j - 1]]] + 
+          Dot[#, phihat[position[[i, j - 1]]]]]} &@(Sum[
+       force[position[[i, j - 1]], position[[z, j - 1]]], {z, 1, 
+        max}]), {j, 2, stepmax}, {i, 1, max}];
+   Show[Graphics3D[{Style[Sphere[], Opacity[0.025]], 
+      Style[Sphere[{0, 0, 0}, 0.1], Green], 
+      Table[{Style[Tube[{{0, 0, 0}, position[[i, step]]}, 0.04], 
+         Blue], Style[Sphere[position[[i, step]], 0.1], Red], 
+        Arrow[{position[[i, step]], 
+          position[[i, step]] + 
+           0.5 Normalize[
+             Sum[force[position[[i, step]], position[[z, step]]], {z, 
+               1, max}]]}]}, {i, 1, max}], 
+      Table[Text[
+        Style[ToString[i], FontFamily -> "Times New Roman", Yellow, 
+         FontSize -> 16], position[[i, step]]], {i, 1, max}], 
+      Table[Text[
+        Style[ToString[
+           ArcCos@Dot[position[[i, step]], 
+              position[[j, step]]]*180/\[Pi]] <> "\[Degree]", 
+         FontFamily -> "Times New Roman", 
+         Hue[((i - 1) (((max - (i + 1) + 1) + 1) + (max - 1))/2 + (j -
+                 i))/((max - 1) max/2)*9/10], FontSize -> 16], 
+        Normalize[(position[[j, 
+              step]] + (position[[i, step]] - position[[j, step]])/
+             2)]*(0.2 + ((i - 
+                  1) (((max - (i + 1) + 1) + 1) + (max - 1))/2 + (j - 
+                 i))/((max - 1) max/2) 4/5)], {i, 1, max - 1}, {j, 
+        i + 1, max}], 
+      Style[Polygon[#], Opacity[0.1]] & /@ 
+       Subsets[position[[All, step]], {3}]}, Boxed -> False, 
+     ImageSize -> {400, 400}, 
+     PlotRange -> {{-1.5, 1.5}, {-1.5, 1.5}, {-1.5, 1.5}}, 
+     ViewAngle -> Pi/11], 
+    Apply[Sequence, 
+     Table[ParametricPlot3D[
+       N[RotationMatrix[\[Alpha], 
+           Evaluate[
+            Cross[position[[i, step]], 
+             position[[j, step]]]]]].position[[i, 
+           step]] (0.2 + ((i - 
+                 1) (((max - (i + 1) + 1) + 1) + (max - 1))/2 + (j - 
+                i))/((max - 1) max/2) 4/5), {\[Alpha], 0, 
+        ArcCos@Dot[position[[i, step]], position[[j, step]]]}, 
+       PlotStyle -> {Hue[((i - 
+                 1) (((max - (i + 1) + 1) + 1) + (max - 1))/2 + (j - 
+                i))/((max - 1) max/2)*9/10], Thickness[0.005]}], {i, 
+       1, max - 1}, {j, i + 1, max}]]]];
+       
+(*To produce the simulation use images[step, number of electrons, maximum number of steps]*)
+(*It is recommended to scaling down the force (line 27–29) so that no chaotic motions are introduced.*)
